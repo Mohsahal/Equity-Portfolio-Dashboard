@@ -6,10 +6,10 @@ import {
 } from "@/types/portfolio";
 
 export function calculateStockMetrics(stocks: Stock[]): CalculatedStock[] {
-  const totalPortfolioInvestment = stocks.reduce(
-    (sum, stock) => sum + stock.purchasePrice * stock.quantity,
-    0
-  );
+  let totalPortfolioInvestment = 0;
+  for (const stock of stocks) {
+    totalPortfolioInvestment += stock.purchasePrice * stock.quantity;
+  }
 
   return stocks.map((stock) => {
     const investment = stock.purchasePrice * stock.quantity;
@@ -38,10 +38,15 @@ export function calculateStockMetrics(stocks: Stock[]): CalculatedStock[] {
 export function calculatePortfolioTotals(
   stocks: CalculatedStock[]
 ): PortfolioTotals {
-  const totalInvestment = stocks.reduce((sum, s) => sum + s.investment, 0);
-  const totalPresentValue = stocks.reduce((sum, s) => sum + s.presentValue, 0);
-  const totalGainLoss = totalPresentValue - totalInvestment;
+  let totalInvestment = 0;
+  let totalPresentValue = 0;
 
+  for (const stock of stocks) {
+    totalInvestment += stock.investment;
+    totalPresentValue += stock.presentValue;
+  }
+
+  const totalGainLoss = totalPresentValue - totalInvestment;
   const totalGainLossPercentage =
     totalInvestment > 0 ? (totalGainLoss / totalInvestment) * 100 : 0;
 
@@ -56,7 +61,7 @@ export function calculatePortfolioTotals(
 export function calculateSectorSummaries(
   stocks: CalculatedStock[]
 ): SectorSummary[] {
-  const groups: Record<string, CalculatedStock[]> = {};
+  const groups: { [key: string]: CalculatedStock[] } = {};
 
   for (const stock of stocks) {
     if (!groups[stock.sector]) {
@@ -65,26 +70,31 @@ export function calculateSectorSummaries(
     groups[stock.sector].push(stock);
   }
 
-  return Object.entries(groups).map(([sector, sectorStocks]) => {
-    const totalInvestment = sectorStocks.reduce(
-      (sum, s) => sum + s.investment,
-      0
-    );
-    const totalPresentValue = sectorStocks.reduce(
-      (sum, s) => sum + s.presentValue,
-      0
-    );
+  const summaries: SectorSummary[] = [];
+
+  for (const sector in groups) {
+    const sectorStocks = groups[sector];
+    let totalInvestment = 0;
+    let totalPresentValue = 0;
+
+    for (const s of sectorStocks) {
+      totalInvestment += s.investment;
+      totalPresentValue += s.presentValue;
+    }
+
     const totalGainLoss = totalPresentValue - totalInvestment;
     const gainLossPercentage =
       totalInvestment > 0 ? (totalGainLoss / totalInvestment) * 100 : 0;
 
-    return {
+    summaries.push({
       sector,
       totalInvestment,
       totalPresentValue,
       totalGainLoss,
       gainLossPercentage,
       stockCount: sectorStocks.length,
-    };
-  });
+    });
+  }
+
+  return summaries;
 }
